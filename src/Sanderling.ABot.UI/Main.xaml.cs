@@ -1,6 +1,7 @@
 ﻿using BotEngine.Interface;
 using BotEngine.UI;
 using Sanderling.UI;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace Sanderling.ABot.UI
@@ -29,11 +30,19 @@ namespace Sanderling.ABot.UI
 
 		public void Present(
 			SimpleInterfaceServerDispatcher interfaceServerDispatcher,
-			FromProcessMeasurement<Interface.MemoryStruct.IMemoryMeasurement> measurement)
+			FromProcessMeasurement<Interface.MemoryStruct.IMemoryMeasurement> measurement,
+			Bot.Bot bot)
 		{
 			Interface?.Present(interfaceServerDispatcher, measurement);
 
 			InterfaceHeader?.SetStatus(Interface.InterfaceStatusEnum());
+
+			BotStepResultTextBox.Text = bot?.StepLastResult?.RenderBotStepToUIText();
+		}
+
+		private void BotStepResultCopyToClipboardButton_Click(object sender, RoutedEventArgs e)
+		{
+			Clipboard.SetText(BotStepResultTextBox.Text);
 		}
 	}
 }

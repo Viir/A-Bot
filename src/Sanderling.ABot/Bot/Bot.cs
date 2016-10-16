@@ -13,9 +13,11 @@ namespace Sanderling.ABot.Bot
 {
 	public class Bot
 	{
+		static public readonly Func<Int64> GetTimeMilli = Bib3.Glob.StopwatchZaitMiliSictInt;
+
 		public BotStepInput StepLastInput { private set; get; }
 
-		BotStepResult stepLastResult;
+		public PropertyGenTimespanInt64<BotStepResult> StepLastResult { private set; get; }
 
 		int motionId;
 
@@ -50,7 +52,7 @@ namespace Sanderling.ABot.Bot
 			((IBotTask)new BotTask { Component = RootTaskListComponent() })
 			?.EnumeratePathToNodeFromTreeDFirst(node => node?.Component)
 			?.Where(taskPath => (taskPath?.LastOrDefault()).ShouldBeIncludedInStepOutput())
-			?.Take(1);
+			?.TakeSubsequenceWhileUnwantedInferenceRuledOut();
 
 		void MemorizeStepInput(BotStepInput input)
 		{
@@ -78,17 +80,21 @@ namespace Sanderling.ABot.Bot
 
 		public BotStepResult Step(BotStepInput input)
 		{
+			var beginTimeMilli = GetTimeMilli();
+
 			StepLastInput = input;
 
 			Exception exception = null;
 
 			var listMotion = new List<MotionRecommendation>();
 
+			IBotTask[][] outputListTaskPath = null;
+
 			try
 			{
 				MemorizeStepInput(input);
 
-				var outputListTaskPath = StepOutputListTaskPath()?.ToArray();
+				outputListTaskPath = StepOutputListTaskPath()?.ToArray();
 
 				foreach (var moduleToggle in outputListTaskPath.ConcatNullable().OfType<ModuleToggleTask>().Select(moduleToggleTask => moduleToggleTask?.module).WhereNotDefault())
 					ToggleLastStepIndexFromModule[moduleToggle] = stepIndex;
@@ -112,13 +118,16 @@ namespace Sanderling.ABot.Bot
 				exception = e;
 			}
 
-			var stepResult = stepLastResult = new BotStepResult
+			var stepResult = new BotStepResult
 			{
 				Exception = exception,
 				ListMotion = listMotion?.ToArrayIfNotEmpty(),
+				OutputListTaskPath = outputListTaskPath,
 			};
 
 			MemorizeStepResult(stepResult);
+
+			StepLastResult = new PropertyGenTimespanInt64<BotStepResult>(stepResult, beginTimeMilli, GetTimeMilli());
 
 			++stepIndex;
 
